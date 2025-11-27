@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portfolio Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content="Minimalist portfolio tracker with live market data, benchmarks, and news."
+  />
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <!-- Chart.js for performance charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body id="top">
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <span class="brand-word">Portfolio Studio</span>
+      </div>
+
+      <nav class="nav-tabs" aria-label="Main navigation">
+        <button class="nav-tab nav-tab--active" data-target="portfolio-page">
+          Portfolio
+        </button>
+        <button class="nav-tab" data-target="news-page">News</button>
+        <button class="nav-tab" data-target="search-page">Search</button>
+      </nav>
+    </header>
+
+    <main class="main">
+      <!-- PORTFOLIO PAGE -->
+      <section id="portfolio-page" class="page page--active" aria-label="Portfolio">
+        <header class="page-header">
+          <h1>My Portfolio</h1>
+          <p>
+            Build a custom portfolio, then track its performance against the S&amp;P 500,
+            Dow, and Nasdaq over any date range.
+          </p>
+        </header>
+
+        <div class="layout-grid">
+          <!-- Left: portfolio editor -->
+          <section class="card card--panel">
+            <header class="card-header">
+              <h2>Holdings</h2>
+              <p class="muted">Equal-weighted across the tickers you add.</p>
+            </header>
+
+            <form id="add-position-form" class="inline-form">
+              <div class="form-field">
+                <label for="ticker-input">Ticker</label>
+                <input
+                  id="ticker-input"
+                  name="ticker"
+                  type="text"
+                  placeholder="AAPL, MSFT, NVDA…"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <button type="submit" class="btn btn--primary">Add</button>
+            </form>
+
+            <ul id="portfolio-list" class="chip-list" aria-live="polite">
+              <!-- dynamically filled -->
+            </ul>
+
+            <p class="muted tiny">
+              Tip: click the × on a ticker chip to remove it. Your portfolio is stored locally in
+              this browser.
+            </p>
+          </section>
+
+          <!-- Right: portfolio chart -->
+          <section class="card card--panel">
+            <header class="card-header card-header--row">
+              <div>
+                <h2>Portfolio performance</h2>
+                <p class="muted">Indexed to 100 at the chosen start date.</p>
+              </div>
+              <div class="benchmark-toggle-group" aria-label="Benchmark indices">
+                <span class="toggle-label">Compare to</span>
+                <label class="pill-toggle">
+                  <input type="checkbox" id="bench-spy" checked />
+                  <span>S&amp;P 500 (SPY)</span>
+                </label>
+                <label class="pill-toggle">
+                  <input type="checkbox" id="bench-dia" />
+                  <span>Dow (DIA)</span>
+                </label>
+                <label class="pill-toggle">
+                  <input type="checkbox" id="bench-qqq" />
+                  <span>Nasdaq (QQQ)</span>
+                </label>
+              </div>
+            </header>
+
+            <div class="chart-shell">
+              <canvas id="portfolio-chart" aria-label="Portfolio vs benchmarks"></canvas>
+            </div>
+
+            <form id="portfolio-range-form" class="range-form">
+              <div class="form-field">
+                <label for="portfolio-start">Start date</label>
+                <input id="portfolio-start" type="date" />
+              </div>
+              <div class="form-field">
+                <label for="portfolio-end">End date</label>
+                <input id="portfolio-end" type="date" />
+              </div>
+              <button type="submit" class="btn btn--ghost">Update range</button>
+            </form>
+
+            <p id="portfolio-status" class="status-text muted tiny"></p>
+          </section>
+        </div>
+      </section>
+
+      <!-- NEWS PAGE -->
+      <section id="news-page" class="page" aria-label="News" hidden>
+        <header class="page-header">
+          <h1>News</h1>
+          <p>
+            Curated headlines around your holdings and the broader market, powered by Alpha
+            Vantage news &amp; sentiment.
+          </p>
+        </header>
+
+        <section class="card card--panel">
+          <header class="card-header">
+            <h2>Portfolio headlines</h2>
+            <p class="muted">
+              We’ll look up news for every ticker currently in your portfolio.
+            </p>
+          </header>
+          <div id="portfolio-news" class="news-grid">
+            <!-- cards injected here -->
+          </div>
+          <p id="portfolio-news-status" class="status-text muted tiny"></p>
+        </section>
+
+        <section class="card card--panel">
+          <header class="card-header">
+            <h2>Market wrap</h2>
+            <p class="muted">
+              Latest stories on financial markets and macro topics.
+            </p>
+          </header>
+          <div id="market-news" class="news-grid">
+            <!-- cards injected here -->
+          </div>
+          <p id="market-news-status" class="status-text muted tiny"></p>
+        </section>
+      </section>
+
+      <!-- SEARCH PAGE -->
+      <section id="search-page" class="page" aria-label="Search" hidden>
+        <header class="page-header">
+          <h1>Search</h1>
+          <p>
+            Look up a company by name or ticker to see live stats, relative performance,
+            and recent headlines.
+          </p>
+        </header>
+
+        <form id="search-form" class="search-bar" role="search">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Search company or ticker (e.g., Apple, AAPL)…"
+            autocomplete="off"
+            required
+          />
+          <button type="submit" class="btn btn--primary">Go</button>
+        </form>
+
+        <section class="layout-grid layout-grid--tall">
+          <!-- Left: fundamentals -->
+          <section class="card card--panel">
+            <header class="card-header">
+              <h2 id="search-result-title">No company selected</h2>
+              <p id="search-result-subtitle" class="muted">
+                Enter a company name or ticker above to get started.
+              </p>
+            </header>
+
+            <dl class="stat-grid" id="company-stats">
+              <!-- populated from API -->
+            </dl>
+          </section>
+
+          <!-- Right: single-stock chart -->
+          <section class="card card--panel">
+            <header class="card-header card-header--row">
+              <div>
+                <h2>Relative performance</h2>
+                <p class="muted">
+                  Stock vs the indices, indexed to 100 at the chosen start date.
+                </p>
+              </div>
+              <div class="benchmark-toggle-group">
+                <span class="toggle-label">Compare to</span>
+                <label class="pill-toggle">
+                  <input type="checkbox" id="search-bench-spy" checked />
+                  <span>S&amp;P 500</span>
+                </label>
+                <label class="pill-toggle">
+                  <input type="checkbox" id="search-bench-dia" />
+                  <span>Dow</span>
+                </label>
+                <label class="pill-toggle">
+                  <input type="checkbox" id="search-bench-qqq" />
+                  <span>Nasdaq</span>
+                </label>
+              </div>
+            </header>
+
+            <div class="chart-shell">
+              <canvas id="search-chart" aria-label="Stock vs benchmarks"></canvas>
+            </div>
+
+            <form id="search-range-form" class="range-form">
+              <div class="form-field">
+                <label for="search-start">Start date</label>
+                <input id="search-start" type="date" />
+              </div>
+              <div class="form-field">
+                <label for="search-end">End date</label>
+                <input id="search-end" type="date" />
+              </div>
+              <button type="submit" class="btn btn--ghost">Update range</button>
+            </form>
+
+            <p id="search-status" class="status-text muted tiny"></p>
+          </section>
+        </section>
+
+        <!-- News for selected stock -->
+        <section class="card card--panel">
+          <header class="card-header">
+            <h2>News</h2>
+            <p class="muted" id="search-news-subtitle">
+              Headlines for the currently selected ticker.
+            </p>
+          </header>
+          <div id="search-news" class="news-grid">
+            <!-- cards injected -->
+          </div>
+          <p id="search-news-status" class="status-text muted tiny"></p>
+        </section>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <a href="#top" class="back-to-top">Back to top ↑</a>
+      <span class="muted tiny">
+        Built by Karthika Siva for CSE 2004 using Alpha Vantage
+      </span>
+    </footer>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
