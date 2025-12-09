@@ -42,8 +42,7 @@
         <header class="page-header">
           <h1>My Portfolio</h1>
           <p>
-            Build a custom portfolio, then track its performance against the S&amp;P 500,
-            Dow, and Nasdaq over any date range.
+            Build your custom portfolio, then track its performance over any date range.
           </p>
         </header>
 
@@ -75,8 +74,7 @@
             </ul>
 
             <p class="muted tiny">
-              Tip: click the × on a ticker chip to remove it. Your portfolio is stored locally in
-              this browser.
+              Your portfolio is stored locally in this browser.
             </p>
           </section>
 
@@ -84,22 +82,22 @@
           <section class="card card--panel">
             <header class="card-header card-header--row">
               <div>
-                <h2>Portfolio performance</h2>
+                <h2>Performance</h2>
                 <p class="muted">Indexed to 100 at the chosen start date.</p>
               </div>
               <div class="benchmark-toggle-group" aria-label="Benchmark indices">
                 <span class="toggle-label">Compare to</span>
                 <label class="pill-toggle">
                   <input type="checkbox" id="bench-spy" checked />
-                  <span>S&amp;P 500 (SPY)</span>
+                  <span>SPY</span>
                 </label>
                 <label class="pill-toggle">
                   <input type="checkbox" id="bench-dia" />
-                  <span>Dow (DIA)</span>
+                  <span>DIA</span>
                 </label>
                 <label class="pill-toggle">
                   <input type="checkbox" id="bench-qqq" />
-                  <span>Nasdaq (QQQ)</span>
+                  <span>QQQ</span>
                 </label>
               </div>
             </header>
@@ -130,8 +128,7 @@
         <header class="page-header">
           <h1>News</h1>
           <p>
-            Curated headlines around your holdings and the broader market, powered by Alpha
-            Vantage news &amp; sentiment.
+            Headlines and sentiment around your holdings and the broader market.
           </p>
         </header>
 
@@ -139,7 +136,7 @@
           <header class="card-header">
             <h2>Portfolio headlines</h2>
             <p class="muted">
-              We’ll look up news for every ticker currently in your portfolio.
+              News for every ticker currently in your portfolio.
             </p>
           </header>
           <div id="portfolio-news" class="news-grid">
@@ -152,7 +149,7 @@
           <header class="card-header">
             <h2>Market wrap</h2>
             <p class="muted">
-              Latest stories on financial markets and macro topics.
+              Stories on financial markets and macroeconomic topics.
             </p>
           </header>
           <div id="market-news" class="news-grid">
@@ -167,7 +164,7 @@
         <header class="page-header">
           <h1>Search</h1>
           <p>
-            Look up a company by name or ticker to see live stats, relative performance,
+            Look up a ticker or company by name to see live stats, relative performance,
             and recent headlines.
           </p>
         </header>
@@ -176,7 +173,7 @@
           <input
             id="search-input"
             type="search"
-            placeholder="Search company or ticker (e.g., Apple, AAPL)…"
+            placeholder="Search company or ticker (e.g., Microsoft, MSFT)…"
             autocomplete="off"
             required
           />
@@ -202,24 +199,24 @@
           <section class="card card--panel">
             <header class="card-header card-header--row">
               <div>
-                <h2>Relative performance</h2>
+                <h2>Performance</h2>
                 <p class="muted">
-                  Stock vs the indices, indexed to 100 at the chosen start date.
+                  Indexed to 100 at the chosen start date.
                 </p>
               </div>
               <div class="benchmark-toggle-group">
                 <span class="toggle-label">Compare to</span>
                 <label class="pill-toggle">
                   <input type="checkbox" id="search-bench-spy" checked />
-                  <span>S&amp;P 500</span>
+                  <span>SPY</span>
                 </label>
                 <label class="pill-toggle">
                   <input type="checkbox" id="search-bench-dia" />
-                  <span>Dow</span>
+                  <span>DIA</span>
                 </label>
                 <label class="pill-toggle">
                   <input type="checkbox" id="search-bench-qqq" />
-                  <span>Nasdaq</span>
+                  <span>QQQ</span>
                 </label>
               </div>
             </header>

@@ -58,44 +58,51 @@ function formatDateLabel(dateStr) {
 }
 
 // Rough util: default to last 90 days if no dates are selected
+// Rough util: default to last 1 year if no dates are selected
 function deriveDateRange(startInput, endInput, availableDates) {
   if (!availableDates || availableDates.length === 0) {
     return { start: null, end: null };
   }
 
-  const sortedDates = [...availableDates].sort(); // "YYYY-MM-DD" works lexicographically
-  const minDate = sortedDates[0];
-  const maxDate = sortedDates[sortedDates.length - 1];
+  const sortedDates = [...availableDates].sort(); // "YYYY-MM-DD" strings
 
-  let start = startInput.value || null;
-  let end = endInput.value || null;
-
-  // If user cleared inputs, fall back to default 90-day window
-  if (!end) {
-    end = maxDate;
-  }
-  if (!start) {
-    const ninetyBackIndex = Math.max(sortedDates.length - 1 - 90, 0);
-    start = sortedDates[ninetyBackIndex];
-  }
-
-  // Clamp to available data range
-  if (start < minDate) start = minDate;
-  if (end > maxDate) end = maxDate;
-
-  // If user reversed them (start > end), swap
-  if (start > end) {
-    const tmp = start;
-    start = end;
-    end = tmp;
-  }
-
-  // Write back to the inputs so the UI always shows a valid range
-  startInput.value = start;
+  // --- END DATE ---
+  // If user didn’t pick an end date, default to the latest trading day
+  let end = endInput.value || sortedDates[sortedDates.length - 1];
   endInput.value = end;
 
+  // --- START DATE ---
+  if (startInput.value) {
+    // User already picked a start date – respect it
+    return { start: startInput.value, end };
+  }
+
+  // Default: 1 year back from `end`
+  const endDateObj = new Date(end);
+  const oneYearAgo = new Date(endDateObj);
+  oneYearAgo.setFullYear(endDateObj.getFullYear() - 1);
+
+  // Convert back to YYYY-MM-DD for comparison
+  const pad = (n) => String(n).padStart(2, "0");
+  const oneYearAgoStr = [
+    oneYearAgo.getFullYear(),
+    pad(oneYearAgo.getMonth() + 1),
+    pad(oneYearAgo.getDate()),
+  ].join("-");
+
+  // Find the first available trading date >= one year ago
+  let start = sortedDates[0];
+  for (const d of sortedDates) {
+    if (d >= oneYearAgoStr) {
+      start = d;
+      break;
+    }
+  }
+
+  startInput.value = start;
   return { start, end };
 }
+
 
 
 // =========================
