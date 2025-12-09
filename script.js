@@ -38,8 +38,19 @@ async function fetchJson(url) {
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
-  return res.json();
+
+  const data = await res.json();
+
+  // Alpha Vantage puts rate-limit and other errors in these fields
+  const apiMessage = data.Note || data.Information || data["Error Message"];
+  if (apiMessage) {
+    console.error("Alpha Vantage error:", apiMessage);
+    throw new Error(apiMessage);
+  }
+
+  return data;
 }
+
 
 function formatDateLabel(dateStr) {
   // dateStr is "YYYY-MM-DD"
@@ -48,26 +59,44 @@ function formatDateLabel(dateStr) {
 
 // Rough util: default to last 90 days if no dates are selected
 function deriveDateRange(startInput, endInput, availableDates) {
-  if (!availableDates || availableDates.length === 0) return { start: null, end: null };
+  if (!availableDates || availableDates.length === 0) {
+    return { start: null, end: null };
+  }
+
+  const sortedDates = [...availableDates].sort(); // "YYYY-MM-DD" works lexicographically
+  const minDate = sortedDates[0];
+  const maxDate = sortedDates[sortedDates.length - 1];
 
   let start = startInput.value || null;
   let end = endInput.value || null;
 
-  const sortedDates = [...availableDates].sort();
-
+  // If user cleared inputs, fall back to default 90-day window
   if (!end) {
-    end = sortedDates[sortedDates.length - 1];
-    endInput.value = end;
+    end = maxDate;
   }
-
   if (!start) {
     const ninetyBackIndex = Math.max(sortedDates.length - 1 - 90, 0);
     start = sortedDates[ninetyBackIndex];
-    startInput.value = start;
   }
+
+  // Clamp to available data range
+  if (start < minDate) start = minDate;
+  if (end > maxDate) end = maxDate;
+
+  // If user reversed them (start > end), swap
+  if (start > end) {
+    const tmp = start;
+    start = end;
+    end = tmp;
+  }
+
+  // Write back to the inputs so the UI always shows a valid range
+  startInput.value = start;
+  endInput.value = end;
 
   return { start, end };
 }
+
 
 // =========================
 // NAVIGATION
@@ -152,7 +181,8 @@ async function fetchDailySeries(symbol) {
   const key = `DAILY_${symbol.toUpperCase()}`;
   if (priceCache.has(key)) return priceCache.get(key);
 
-  const url = `${ALPHA_VANTAGE_BASE}?function=TIME_SERIES_DAILY_ADJUSTED&symbol=${encodeURIComponent(
+  // Match your old working code: TIME_SERIES_DAILY instead of DAILY_ADJUSTED
+  const url = `${ALPHA_VANTAGE_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(
     symbol
   )}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
 
@@ -163,13 +193,14 @@ async function fetchDailySeries(symbol) {
   );
 
   if (!seriesKey) {
+    console.error("No daily series in response for", symbol, data);
     throw new Error(`Unexpected daily series response for ${symbol}`);
   }
 
   const seriesObj = data[seriesKey];
   const rows = Object.entries(seriesObj).map(([date, values]) => ({
     date,
-    close: parseFloat(values["4. close"] || values["5. adjusted close"] || "0"),
+    close: parseFloat(values["4. close"] || "0"),
   }));
 
   const sorted = rows
@@ -179,6 +210,7 @@ async function fetchDailySeries(symbol) {
   priceCache.set(key, sorted);
   return sorted;
 }
+
 
 async function fetchGlobalQuote(symbol) {
   const url = `${ALPHA_VANTAGE_BASE}?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(
@@ -248,7 +280,7 @@ function normalizeSeries(series) {
 
 async function buildDataset(symbol, startDate, endDate, label, color) {
   const rawSeries = await fetchDailySeries(symbol);
-  const sliced = sliceSeriesByDate(rawSeries, start, end);
+  const sliced = sliceSeriesByDate(rawSeries, startDate, endDate);
   const norm = normalizeSeries(sliced);
   return {
     label: label || symbol.toUpperCase(),
@@ -442,24 +474,47 @@ async function refreshNewsPage() {
   const marketStatus = $("#market-news-status");
 
   // Portfolio news
+  // Portfolio news
   portfolioNewsContainer.innerHTML = "";
   if (!portfolio.length) {
-    portfolioStatus.textContent = "Add tickers to your portfolio to see related headlines.";
+    portfolioStatus.textContent =
+      "Add tickers to your portfolio to see related headlines.";
   } else {
     portfolioStatus.textContent = "Loading headlines for your holdings…";
     try {
-      const articles = await fetchNews({
-        tickers: portfolio.slice(0, 5), // keep it small for free tier
-        limit: 20,
+      // Only use the first few tickers to avoid smashing the free tier
+      const tickersToUse = portfolio.slice(0, 3);
+
+      let mergedArticles = [];
+
+      for (const symbol of tickersToUse) {
+        // Fetch per-ticker – Alpha Vantage behaves better this way
+        const articlesForSymbol = await fetchNews({
+          tickers: [symbol],
+          limit: 8, // a few per ticker, we’ll trim later
+        });
+        mergedArticles = mergedArticles.concat(articlesForSymbol || []);
+      }
+
+      // Optional: sort by time_published descending
+      mergedArticles.sort((a, b) => {
+        const ta = a.time_published || "";
+        const tb = b.time_published || "";
+        return tb.localeCompare(ta);
       });
-      renderNewsCards(portfolioNewsContainer, articles);
+
+      // Cap at 20 total
+      mergedArticles = mergedArticles.slice(0, 20);
+
+      renderNewsCards(portfolioNewsContainer, mergedArticles);
       portfolioStatus.textContent =
-        articles.length === 0 ? "No recent portfolio headlines found." : "";
+        mergedArticles.length === 0 ? "No recent portfolio headlines found." : "";
     } catch (e) {
       console.error(e);
       portfolioStatus.textContent = "Unable to load portfolio news right now.";
     }
   }
+
 
   // Market news
   marketNewsContainer.innerHTML = "";
@@ -478,43 +533,78 @@ async function refreshNewsPage() {
   }
 }
 
+function createNewsCard(article) {
+  const card = createEl("article", "news-card");
+
+  const title = createEl("h3", "news-title");
+  title.textContent = article.title || "Untitled story";
+
+  const meta = createEl("div", "news-meta");
+  const source = article.source || article.source_domain || "Unknown source";
+  const ts = article.time_published || "";
+  const date = ts ? `${ts.slice(0, 4)}-${ts.slice(4, 6)}-${ts.slice(6, 8)}` : "";
+  meta.textContent = `${source}${date ? " • " + date : ""}`;
+
+  const tag = createEl(
+    "span",
+    "news-tag",
+    (article.overall_sentiment_label || "Neutral").toUpperCase()
+  );
+
+  const summary = createEl(
+    "p",
+    "muted tiny",
+    article.summary || article.snippet || ""
+  );
+
+  const link = createEl("a", "news-link", "Open article ↗");
+  link.href = article.url || "#";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+
+  card.append(title, meta, tag, summary, link);
+  return card;
+}
+
 function renderNewsCards(container, articles) {
   container.innerHTML = "";
   if (!articles || !articles.length) return;
 
-  articles.slice(0, 20).forEach((article) => {
-    const card = createEl("article", "news-card");
+  const MAX_TOTAL = 20;      // still only ever show up to 20
+  const INITIAL_VISIBLE = 8; // first load: 8 cards
 
-    const title = createEl("h3", "news-title");
-    title.textContent = article.title || "Untitled story";
+  const trimmed = articles.slice(0, MAX_TOTAL);
+  let visibleCount = Math.min(INITIAL_VISIBLE, trimmed.length);
 
-    const meta = createEl("div", "news-meta");
-    const source = article.source || article.source_domain || "Unknown source";
-    const ts = article.time_published || "";
-    const date = ts ? `${ts.slice(0, 4)}-${ts.slice(4, 6)}-${ts.slice(6, 8)}` : "";
-    meta.textContent = `${source}${date ? " • " + date : ""}`;
+  function renderSlice() {
+    container.innerHTML = "";
 
-    const tag = createEl(
-      "span",
-      "news-tag",
-      (article.overall_sentiment_label || "Neutral").toUpperCase()
-    );
+    // Render currently visible cards
+    trimmed.slice(0, visibleCount).forEach((article) => {
+      const card = createNewsCard(article);
+      container.appendChild(card);
+    });
 
-    const summary = createEl(
-      "p",
-      "muted tiny",
-      article.summary || article.snippet || ""
-    );
+    // If there are more, show the "Show more" button
+    if (visibleCount < trimmed.length) {
+      const wrapper = createEl("div", "news-more-wrapper");
+      const btn = createEl("button", "btn btn--ghost news-more-btn", "Show more");
+      btn.type = "button";
 
-    const link = createEl("a", "news-link", "Open article ↗");
-    link.href = article.url || "#";
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
+      btn.addEventListener("click", () => {
+        // When clicked, reveal the rest of the cards
+        visibleCount = trimmed.length;
+        renderSlice();
+      });
 
-    card.append(title, meta, tag, summary, link);
-    container.appendChild(card);
-  });
+      wrapper.appendChild(btn);
+      container.appendChild(wrapper);
+    }
+  }
+
+  renderSlice();
 }
+
 
 // =========================
 // SEARCH PAGE
