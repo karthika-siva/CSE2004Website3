@@ -1,7 +1,11 @@
-// =========================
 // CONFIG
-// =========================
-const ALPHA_VANTAGE_KEY = "A2ETSXLOGFIEWP5Y";
+
+// keys:
+// A2ETSXLOGFIEWP5Y
+// 73KPORDX0QUY3AIL
+// BN7KF2HRYBJF9EQY
+
+const ALPHA_VANTAGE_KEY = "BN7KF2HRYBJF9EQY";
 const ALPHA_VANTAGE_BASE = "https://www.alphavantage.co/query";
 
 const BENCHMARK_SYMBOLS = {
@@ -10,7 +14,6 @@ const BENCHMARK_SYMBOLS = {
   qqq: "QQQ",
 };
 
-// Simple in-memory cache so we don't smash the free rate limits
 const priceCache = new Map();
 
 // Portfolio state
@@ -19,9 +22,7 @@ let portfolioChart = null;
 let searchChart = null;
 let currentSearchSymbol = null;
 
-// =========================
 // UTILS
-// =========================
 function $(selector) {
   return document.querySelector(selector);
 }
@@ -41,7 +42,6 @@ async function fetchJson(url) {
 
   const data = await res.json();
 
-  // Alpha Vantage puts rate-limit and other errors in these fields
   const apiMessage = data.Note || data.Information || data["Error Message"];
   if (apiMessage) {
     console.error("Alpha Vantage error:", apiMessage);
@@ -57,8 +57,7 @@ function formatDateLabel(dateStr) {
   return dateStr;
 }
 
-// Rough util: default to last 90 days if no dates are selected
-// Rough util: default to last 1 year if no dates are selected
+
 function deriveDateRange(startInput, endInput, availableDates) {
   if (!availableDates || availableDates.length === 0) {
     return { start: null, end: null };
@@ -66,23 +65,18 @@ function deriveDateRange(startInput, endInput, availableDates) {
 
   const sortedDates = [...availableDates].sort(); // "YYYY-MM-DD" strings
 
-  // --- END DATE ---
-  // If user didn’t pick an end date, default to the latest trading day
+
   let end = endInput.value || sortedDates[sortedDates.length - 1];
   endInput.value = end;
 
-  // --- START DATE ---
   if (startInput.value) {
-    // User already picked a start date – respect it
     return { start: startInput.value, end };
   }
 
-  // Default: 1 year back from `end`
   const endDateObj = new Date(end);
   const oneYearAgo = new Date(endDateObj);
   oneYearAgo.setFullYear(endDateObj.getFullYear() - 1);
 
-  // Convert back to YYYY-MM-DD for comparison
   const pad = (n) => String(n).padStart(2, "0");
   const oneYearAgoStr = [
     oneYearAgo.getFullYear(),
@@ -90,7 +84,6 @@ function deriveDateRange(startInput, endInput, availableDates) {
     pad(oneYearAgo.getDate()),
   ].join("-");
 
-  // Find the first available trading date >= one year ago
   let start = sortedDates[0];
   for (const d of sortedDates) {
     if (d >= oneYearAgoStr) {
@@ -105,9 +98,7 @@ function deriveDateRange(startInput, endInput, availableDates) {
 
 
 
-// =========================
 // NAVIGATION
-// =========================
 function initNavigation() {
   const tabs = document.querySelectorAll(".nav-tab");
   const pages = document.querySelectorAll(".page");
@@ -130,9 +121,7 @@ function initNavigation() {
   });
 }
 
-// =========================
 // PORTFOLIO: LOCAL STORAGE
-// =========================
 function loadPortfolioFromStorage() {
   try {
     const raw = localStorage.getItem("portfolioTickers");
@@ -150,9 +139,7 @@ function savePortfolioToStorage() {
   localStorage.setItem("portfolioTickers", JSON.stringify(portfolio));
 }
 
-// =========================
-// PORTFOLIO: UI
-// =========================
+// PORTFOLIO UI
 function renderPortfolioList() {
   const list = $("#portfolio-list");
   list.innerHTML = "";
@@ -174,21 +161,17 @@ function renderPortfolioList() {
       savePortfolioToStorage();
       renderPortfolioList();
       updatePortfolioChart();
-      // news will be refreshed when user visits news tab
     });
     li.append(span, removeBtn);
     list.appendChild(li);
   });
 }
 
-// =========================
 // ALPHA VANTAGE CALLS
-// =========================
 async function fetchDailySeries(symbol) {
   const key = `DAILY_${symbol.toUpperCase()}`;
   if (priceCache.has(key)) return priceCache.get(key);
 
-  // Match your old working code: TIME_SERIES_DAILY instead of DAILY_ADJUSTED
   const url = `${ALPHA_VANTAGE_BASE}?function=TIME_SERIES_DAILY&symbol=${encodeURIComponent(
     symbol
   )}&outputsize=compact&apikey=${ALPHA_VANTAGE_KEY}`;
@@ -269,9 +252,7 @@ async function fetchNews({ tickers, topics, limit = 20 }) {
   return data.feed || [];
 }
 
-// =========================
 // PERFORMANCE CALCULATIONS
-// =========================
 function sliceSeriesByDate(series, startDate, endDate) {
   return series.filter((row) => row.date >= startDate && row.date <= endDate);
 }
@@ -303,16 +284,13 @@ async function buildDataset(symbol, startDate, endDate, label, color) {
 async function buildPortfolioDataset(startDate, endDate, color) {
   if (!portfolio.length) return null;
 
-  // Fetch all series
   const allSeries = await Promise.all(portfolio.map((s) => fetchDailySeries(s)));
 
-  // Use dates from the first ticker as the canonical set
   const baseSeries = sliceSeriesByDate(allSeries[0], startDate, endDate);
   if (!baseSeries.length) return null;
 
   const dates = baseSeries.map((row) => row.date);
 
-  // Create lookup maps for others
   const maps = allSeries.map((series) => {
     const sliced = sliceSeriesByDate(series, startDate, endDate);
     const map = new Map();
@@ -325,10 +303,9 @@ async function buildPortfolioDataset(startDate, endDate, color) {
     const closes = maps
       .map((m) => m.get(date))
       .filter((v) => v !== undefined && !Number.isNaN(v));
-    if (closes.length !== portfolio.length) return; // skip if missing data
+    if (closes.length !== portfolio.length) return; 
 
     if (!values.length) {
-      // set base value
       values.push({ date, base: closes });
     } else {
       values.push({ date, base: closes });
@@ -355,9 +332,7 @@ async function buildPortfolioDataset(startDate, endDate, color) {
   };
 }
 
-// =========================
 // PORTFOLIO CHART
-// =========================
 async function updatePortfolioChart() {
   const status = $("#portfolio-status");
   const startInput = $("#portfolio-start");
@@ -366,7 +341,6 @@ async function updatePortfolioChart() {
   status.textContent = "Loading data…";
 
   try {
-    // figure out available dates by picking SPY (broad market calendar)
     const spySeries = await fetchDailySeries(BENCHMARK_SYMBOLS.spy);
     const availableDates = spySeries.map((row) => row.date);
 
@@ -382,7 +356,6 @@ async function updatePortfolioChart() {
 
     const datasets = [];
 
-    // portfolio dataset
     if (portfolio.length) {
       const portfolioDs = await buildPortfolioDataset(
         start,
@@ -392,7 +365,6 @@ async function updatePortfolioChart() {
       if (portfolioDs) datasets.push(portfolioDs);
     }
 
-    // Benchmarks
     const benchColors = {
       spy: "rgba(127, 180, 255, 1)",
       dia: "rgba(156, 219, 186, 1)",
@@ -467,20 +439,17 @@ async function updatePortfolioChart() {
   } catch (e) {
     console.error(e);
     status.textContent =
-      "There was a problem loading data (possibly hitting the free API limit). Try again later.";
+      "There was a problem loading data (free API limits are easy to hit). Try again later.";
   }
 }
 
-// =========================
 // NEWS PAGE
-// =========================
 async function refreshNewsPage() {
   const portfolioNewsContainer = $("#portfolio-news");
   const portfolioStatus = $("#portfolio-news-status");
   const marketNewsContainer = $("#market-news");
   const marketStatus = $("#market-news-status");
 
-  // Portfolio news
   // Portfolio news
   portfolioNewsContainer.innerHTML = "";
   if (!portfolio.length) {
@@ -489,28 +458,24 @@ async function refreshNewsPage() {
   } else {
     portfolioStatus.textContent = "Loading headlines for your holdings…";
     try {
-      // Only use the first few tickers to avoid smashing the free tier
       const tickersToUse = portfolio.slice(0, 3);
 
       let mergedArticles = [];
 
       for (const symbol of tickersToUse) {
-        // Fetch per-ticker – Alpha Vantage behaves better this way
         const articlesForSymbol = await fetchNews({
           tickers: [symbol],
-          limit: 8, // a few per ticker, we’ll trim later
+          limit: 8, 
         });
         mergedArticles = mergedArticles.concat(articlesForSymbol || []);
       }
 
-      // Optional: sort by time_published descending
       mergedArticles.sort((a, b) => {
         const ta = a.time_published || "";
         const tb = b.time_published || "";
         return tb.localeCompare(ta);
       });
 
-      // Cap at 20 total
       mergedArticles = mergedArticles.slice(0, 20);
 
       renderNewsCards(portfolioNewsContainer, mergedArticles);
@@ -577,8 +542,8 @@ function renderNewsCards(container, articles) {
   container.innerHTML = "";
   if (!articles || !articles.length) return;
 
-  const MAX_TOTAL = 20;      // still only ever show up to 20
-  const INITIAL_VISIBLE = 8; // first load: 8 cards
+  const MAX_TOTAL = 20;      
+  const INITIAL_VISIBLE = 8; 
 
   const trimmed = articles.slice(0, MAX_TOTAL);
   let visibleCount = Math.min(INITIAL_VISIBLE, trimmed.length);
@@ -586,20 +551,17 @@ function renderNewsCards(container, articles) {
   function renderSlice() {
     container.innerHTML = "";
 
-    // Render currently visible cards
     trimmed.slice(0, visibleCount).forEach((article) => {
       const card = createNewsCard(article);
       container.appendChild(card);
     });
 
-    // If there are more, show the "Show more" button
     if (visibleCount < trimmed.length) {
       const wrapper = createEl("div", "news-more-wrapper");
       const btn = createEl("button", "btn btn--ghost news-more-btn", "Show more");
       btn.type = "button";
 
       btn.addEventListener("click", () => {
-        // When clicked, reveal the rest of the cards
         visibleCount = trimmed.length;
         renderSlice();
       });
@@ -613,9 +575,7 @@ function renderNewsCards(container, articles) {
 }
 
 
-// =========================
 // SEARCH PAGE
-// =========================
 async function handleSearchSubmit(event) {
   event.preventDefault();
   const query = $("#search-input").value.trim();
@@ -635,7 +595,6 @@ async function handleSearchSubmit(event) {
   newsStatus.textContent = "";
 
   try {
-    // Heuristic: if user typed a short all-caps string, treat as ticker.
     let symbolGuess = null;
     let nameGuess = null;
 
@@ -664,7 +623,6 @@ async function handleSearchSubmit(event) {
       overview.Sector || "Unknown sector"
     } • ${overview.Industry || "Unknown industry"}`;
 
-    // Fill stats
     const stats = [
       {
         label: "Price",
@@ -809,9 +767,7 @@ async function updateSearchChart() {
   }
 }
 
-// =========================
 // INIT
-// =========================
 document.addEventListener("DOMContentLoaded", () => {
   if (!ALPHA_VANTAGE_KEY || ALPHA_VANTAGE_KEY === "YOUR_ALPHA_VANTAGE_API_KEY_HERE") {
     console.warn("Remember to set your Alpha Vantage API key in script.js.");
@@ -822,14 +778,12 @@ document.addEventListener("DOMContentLoaded", () => {
   renderPortfolioList();
   updatePortfolioChart();
 
-  // Portfolio add form
   $("#add-position-form").addEventListener("submit", (e) => {
     e.preventDefault();
     const input = $("#ticker-input");
     const raw = input.value.trim();
     if (!raw) return;
 
-    // Basic ticker normalization
     const symbol = raw.toUpperCase();
 
     if (!/^[A-Z.\-]{1,6}$/.test(symbol)) {
@@ -847,7 +801,6 @@ document.addEventListener("DOMContentLoaded", () => {
     input.value = "";
   });
 
-  // Portfolio forms
   $("#portfolio-range-form").addEventListener("submit", (e) => {
     e.preventDefault();
     updatePortfolioChart();

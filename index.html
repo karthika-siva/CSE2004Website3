@@ -9,14 +9,12 @@
     content="Minimalist portfolio tracker with live market data, benchmarks, and news."
   />
   <link rel="stylesheet" href="styles.css" />
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
     href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap"
     rel="stylesheet"
   />
-  <!-- Chart.js for performance charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body id="top">
@@ -37,7 +35,6 @@
     </header>
 
     <main class="main">
-      <!-- PORTFOLIO PAGE -->
       <section id="portfolio-page" class="page page--active" aria-label="Portfolio">
         <header class="page-header">
           <h1>My Portfolio</h1>
@@ -47,7 +44,6 @@
         </header>
 
         <div class="layout-grid">
-          <!-- Left: portfolio editor -->
           <section class="card card--panel">
             <header class="card-header">
               <h2>Holdings</h2>
@@ -70,7 +66,6 @@
             </form>
 
             <ul id="portfolio-list" class="chip-list" aria-live="polite">
-              <!-- dynamically filled -->
             </ul>
 
             <p class="muted tiny">
@@ -78,7 +73,6 @@
             </p>
           </section>
 
-          <!-- Right: portfolio chart -->
           <section class="card card--panel">
             <header class="card-header card-header--row">
               <div>
@@ -123,7 +117,6 @@
         </div>
       </section>
 
-      <!-- NEWS PAGE -->
       <section id="news-page" class="page" aria-label="News" hidden>
         <header class="page-header">
           <h1>News</h1>
@@ -140,7 +133,6 @@
             </p>
           </header>
           <div id="portfolio-news" class="news-grid">
-            <!-- cards injected here -->
           </div>
           <p id="portfolio-news-status" class="status-text muted tiny"></p>
         </section>
@@ -153,13 +145,11 @@
             </p>
           </header>
           <div id="market-news" class="news-grid">
-            <!-- cards injected here -->
           </div>
           <p id="market-news-status" class="status-text muted tiny"></p>
         </section>
       </section>
 
-      <!-- SEARCH PAGE -->
       <section id="search-page" class="page" aria-label="Search" hidden>
         <header class="page-header">
           <h1>Search</h1>
@@ -181,7 +171,6 @@
         </form>
 
         <section class="layout-grid layout-grid--tall">
-          <!-- Left: fundamentals -->
           <section class="card card--panel">
             <header class="card-header">
               <h2 id="search-result-title">No company selected</h2>
@@ -191,11 +180,9 @@
             </header>
 
             <dl class="stat-grid" id="company-stats">
-              <!-- populated from API -->
             </dl>
           </section>
 
-          <!-- Right: single-stock chart -->
           <section class="card card--panel">
             <header class="card-header card-header--row">
               <div>
@@ -241,7 +228,6 @@
           </section>
         </section>
 
-        <!-- News for selected stock -->
         <section class="card card--panel">
           <header class="card-header">
             <h2>News</h2>
@@ -250,7 +236,6 @@
             </p>
           </header>
           <div id="search-news" class="news-grid">
-            <!-- cards injected -->
           </div>
           <p id="search-news-status" class="status-text muted tiny"></p>
         </section>

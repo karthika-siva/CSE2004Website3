@@ -519,7 +519,6 @@ input:focus {
   justify-content: flex-end;
 }
 
-/* Responsive tweaks */
 
 @media (max-width: 900px) {
   .layout-grid {
